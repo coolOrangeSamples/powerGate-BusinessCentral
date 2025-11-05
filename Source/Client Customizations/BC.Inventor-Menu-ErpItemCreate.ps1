@@ -19,33 +19,42 @@ Add-InventorMenuItem -Name "Create/Update`n$erpName Item..." -Action {
 
     #region Pre-Checks
     if ($document.DocumentType -notin @([Inventor.DocumentTypeEnum]::kAssemblyDocumentObject, [Inventor.DocumentTypeEnum]::kPartDocumentObject)) {
-        $null = [System.Windows.MessageBox]::Show("This function is available only on parts or assemblies!", "powerGate - Document type not supported", "OK", "Information")
+        $message = "This function is available only on parts or assemblies!"
+        $title = "powerGate - Document type not supported"
+        $null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::OK)
         return
     }
     
     #TODO: In case the ERP system generates the number, we must allow to fetch the number from the ERP system before saving the file
     if ($document.FileSaveCounter -eq 0) {
-        
-        $null = [System.Windows.MessageBox]::Show("The current document is not saved! Please save it before creating an Item in $erpName.", "powerGate - Save Inventor Document", "OK", "Information")
+        $message = "The current document is not saved! Please save it before creating an Item in $erpName."
+        $title = "powerGate - Save Inventor Document"
+        $null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::OK)
         return
     }
 
     if ($itemNumber.Contains("/") -or $itemNumber.Contains("%2F") -or $itemNumber.Contains("\") -or $itemNumber.Contains("%5C")) {
-		$null = [System.Windows.MessageBox]::Show("The iProperty 'Part Number' contains unsupported slashes or backslashes!", "powerGate - Part Number not valid", "OK", "Error")
+        $message = "The iProperty 'Part Number' contains unsupported slashes or backslashes!"
+        $title = "powerGate - Part Number not valid"
+        $null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowError($message, $title)
         return
 	}
     
 	if ($itemNumber.Length -gt 20) { #TODO: Business Central validate Item Number length
-        $null = [System.Windows.MessageBox]::Show("The iProperty 'Part Number' is $($itemNumber.Length) characters long! A Part Number must not exceed 20 characters to create an Item in $erpName.", "powerGate - Part Number not valid", "OK", "Error")
-		return
+        $message = "The iProperty 'Part Number' is $($itemNumber.Length) characters long! A Part Number must not exceed 20 characters to create an Item in $erpName."
+        $title = "powerGate - Part Number not valid"
+        $null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowError($message, $title)
+        return
 	}
     #endregion
 
     $erpItem = Get-ERPObject -EntitySet $itemEntitySet -Keys @{ Number = $itemNumber }
     if (-not $erpItem) {
         # Create new ERP Item
+        Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
         $xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemCreate.xaml")
         $window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+        ApplyVaultTheme $window
         $window.Title = "powerGate - Create new $erpName Item"
         $window.FindName('Title').Content = "Create new $erpName Item with number '$itemNumber'"
         $window.FindName('UnitOfMeasureCombobox').ItemsSource = (GetPowerGateConfiguration 'UnitOfMeasures')
@@ -67,8 +76,10 @@ Add-InventorMenuItem -Name "Create/Update`n$erpName Item..." -Action {
     }
     else {
         # Update ERP Item
+        Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 		$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemUpdate.xaml")
 		$window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+        ApplyVaultTheme $window
         $window.Title = "powerGate - Update $erpName Item"
         $window.FindName('Title').Content = "Update $erpName Item '$itemNumber'"
 

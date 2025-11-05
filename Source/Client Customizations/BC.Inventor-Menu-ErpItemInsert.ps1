@@ -17,18 +17,24 @@ Add-InventorMenuItem -Name "Insert`n$erpName Item..." -Action {
 
     #region Pre-Checks
     if ($document.IsModifiable -eq $fale) {
-        $null = [System.Windows.MessageBox]::Show("The current document is not editable! Please re-open the file as editable for creating a link to an Item in $erpName.", "powerGate - Document not editable", "OK", "Information")
+        $message = "The current document is not editable! Please re-open the file as editable for creating a link to an Item in $erpName."
+    	$title = "powerGate - Document not editable"
+    	$null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::Ok)
         return
     }
 
     if ($document.DocumentType -notin @([Inventor.DocumentTypeEnum]::kAssemblyDocumentObject, [Inventor.DocumentTypeEnum]::kPartDocumentObject)) {
-        $null = [System.Windows.MessageBox]::Show("This function is available only on parts or assemblies!", "powerGate - Document type not supported", "OK", "Information")
+        $message = "This function is available only on parts or assemblies!"
+    	$title = "powerGate - Document type not supported"
+    	$null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::Ok)
         return
     }
     #endregion
     
+    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
     $xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemInsert.xaml")
     $window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+    ApplyVaultTheme $window
     $window.Title = "powerGate - Insert $erpName Item"
 
     $isAssembly = $document.DocumentType -eq [Inventor.DocumentTypeEnum]::kAssemblyDocumentObject
@@ -74,13 +80,14 @@ Add-InventorMenuItem -Name "Insert`n$erpName Item..." -Action {
         else {
             $message = "By clicking Yes, a Raw Material with the Number '$number' and Quantity $quantity will be added to the part as custom iProperty"
         }
-        $answer = [System.Windows.Forms.MessageBox]::Show("$message `n`nDo you want to proceed?", "powerGate - Confirm operation", "YesNo" , "Warning" , "Button1")
+        $title = "powerGate - Confirm operation"
+        $answer = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowWarning($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::YesNo)
         if ($answer -eq "Yes") {
             if ($isAssembly) {
                 $occur = $document.ComponentDefinition.Occurrences
                 foreach($oc in $occur){
                     if($oc.Definition.DisplayName -eq $number){
-                        [System.Windows.Forms.MessageBox]::Show("This item has already been added!", "powerGate - Virtual Component already exists", "OK" , "Information" , "Button1")
+                        $null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowError("This item has already been added!", "powerGate - Virtual Component already exists")
                         return
                     }
                 }

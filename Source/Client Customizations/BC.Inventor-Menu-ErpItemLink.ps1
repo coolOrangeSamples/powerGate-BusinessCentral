@@ -17,18 +17,24 @@ Add-InventorMenuItem -Name "Link`n$erpName Item..." -Action {
 
     #region Pre-Checks
     if ($document.IsModifiable -eq $fale) {
-        $null = [System.Windows.MessageBox]::Show("The current document is not editable! Please re-open the file as editable for creating a link to an Item in $erpName.", "powerGate - Document not editable", "OK", "Information")
+        $message = "The current document is not editable! Please re-open the file as editable for creating a link to an Item in $erpName."
+    	$title = "powerGate - Document not editable"
+    	$null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::Ok)
         return
     }
 
     if ($document.DocumentType -notin @([Inventor.DocumentTypeEnum]::kAssemblyDocumentObject, [Inventor.DocumentTypeEnum]::kPartDocumentObject)) {
-        $null = [System.Windows.MessageBox]::Show("This function is available only on parts or assemblies!", "powerGate - Document type not supported", "OK", "Information")
+        $message = "This function is available only on parts or assemblies!"
+    	$title = "powerGate - Document type not supported"
+    	$null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowMessage($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::Ok)
         return
     }
     #endregion
 
+    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
     $xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemLink.xaml")
     $window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+    ApplyVaultTheme $window
     $window.Title = "powerGate - Link $erpName Item"
     $window.FindName('Title').Content = "Search and link $erpName Item"
     $window.FindName('SearchResults').Tag = "Search $erpName Item"
@@ -60,8 +66,10 @@ Add-InventorMenuItem -Name "Link`n$erpName Item..." -Action {
         $selectedElement = $window.FindName('SearchResults').SelectedItems[0]
 		$number = $selectedElement.Number
         $oldNumber = $document.PropertySets.Item('Design Tracking Properties')['Part Number'].Value
-		$answer = [System.Windows.Forms.MessageBox]::Show("To link the $erpName Item '$number' with the current file, the iProperty 'Part Number' will be changed from '$oldNumber' to '$number'.`n`nAre you shure you want to proceed?","powerGate - Confirm operation", "YesNo", "Warning", "Button1")
-		if($answer -eq "Yes"){
+		$message = "To link the $erpName Item '$number' with the current file, the iProperty 'Part Number' will be changed from '$oldNumber' to '$number'.`n`nAre you shure you want to proceed?"
+        $title = "powerGate - Confirm operation"
+		$answer = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowWarning($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::YesNo)
+        if($answer -eq "Yes"){
             $document.PropertySets.Item('Design Tracking Properties')['Part Number'].Value = $selectedElement.Number
             #TODO: Write back other properties from ERP if needed. The following lines are just an example
             $document.PropertySets.Item('Inventor Summary Information')['Title'].Value = $selectedElement.Title

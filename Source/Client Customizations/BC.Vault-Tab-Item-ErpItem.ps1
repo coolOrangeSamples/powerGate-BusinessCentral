@@ -17,8 +17,10 @@ Add-VaultTab -Name "$erpName Item" -EntityType Item -Action {
 	$script:itemNumber = $selectedItem._Number
 	if ($script:itemNumber) { $script:itemNumber = $script:itemNumber.ToUpper() } #TODO: Business Central converts Item Number to upper case
 
+	Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 	$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.Vault-Tab-ErpItem.xaml")
 	$tab_control = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+	ApplyVaultTheme $tab_control
 
 	#region Link ERP button
 	$tab_control.FindName('ButtonLinkErpItem').Add_Click({
@@ -91,7 +93,7 @@ Add-VaultTab -Name "$erpName Item" -EntityType Item -Action {
 			$tab_control.FindName('StatusIcon').Source = 'pack://application:,,,/powerGate.UI;component/Resources/status_error.png'
 		}
 		
-		$tab_control.FindName('Thumbnail').Source = GetImageFromBase64String $erpItem.Thumbnail
+		$tab_control.FindName('Thumbnail').Source = GetImageFromByteArray $erpItem.Thumbnail
 		$tab_control.FindName('UnitOfMeasureCombobox').ItemsSource = (GetPowerGateConfiguration 'UnitOfMeasures')
 		$tab_control.FindName('ItemData').DataContext = $erpItem
 		$tab_control.FindName('ButtonErpItem').Content = "Update ERP Item..."
@@ -107,8 +109,10 @@ Add-VaultTab -Name "$erpName Item" -EntityType Item -Action {
 }
 
 function LinkErpItemVaultItem($vaultItem) {
+	Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 	$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemLink.xaml")
 	$window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+	ApplyVaultTheme $window
 	$window.Title = "powerGate - Link $erpName Item"
 	$window.FindName('Title').Content = "Search and link $erpName Item"
 	$window.FindName('SearchResults').Tag = "Search $erpName Item"
@@ -139,14 +143,16 @@ function LinkErpItemVaultItem($vaultItem) {
 	$window.FindName('ButtonLink').Add_Click({
 		$selectedElement = $window.FindName('SearchResults').SelectedItems[0]
 		$number = $selectedElement.Number
-		$answer = [System.Windows.Forms.MessageBox]::Show("To link the $erpName Item '$number' with the item '$($vaultItem._Number)', the Number of the Vault item will be changed from '$($vaultItem._Number)' to '$number'.`n`nAre you sure you want to proceed?", "powerGate - Confirm operation", "YesNo" , "Warning" , "Button1")
+		$message = "To link the $erpName Item '$number' with the item '$($vaultItem._Number)', the Number of the Vault item will be changed from '$($vaultItem._Number)' to '$number'.`n`nAre you sure you want to proceed?"
+    	$title = "powerGate - Confirm operation"
+    	$answer = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowWarning($message, $title, [Autodesk.DataManagement.Client.Framework.Forms.Currency.ButtonConfiguration]::YesNo)
 		if ($answer -eq "Yes") {
 			$updatedVaultItem = Update-VaultItem -Number $vaultItem._Number -NewNumber $selectedElement.Number -ErrorAction Stop
 			#TODO: Write back other properties from ERP if needed. The following line is just an example
 			#$updatedVaultItem = Update-VaultItem -Number $vaultItem._Number -NewNumber $selectedElement.Number -Title $selectedElement.Title -Description $selectedElement.Description -ErrorAction Stop
 			
 			if (-not $updatedVaultItem) {
-				[System.Windows.Forms.MessageBox]::Show("The item could not be updated", "powerGate - Update error", "OK" , "Error" , "Button1")
+				$null = [Autodesk.DataManagement.Client.Framework.Forms.Library]::ShowError("The item could not be updated", "powerGate - Update error")
 			}
 			
 			$window.DialogResult = $true
@@ -159,8 +165,10 @@ function LinkErpItemVaultItem($vaultItem) {
 }
 
 function CreateNewErpItemVaultItem($vaultItem) {
+	Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 	$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemCreate.xaml")
 	$window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+	ApplyVaultTheme $window
 	$window.Title = "powerGate - Create new $erpName Item"
 	$window.FindName('Title').Content = "Create new $erpName Item with number '$itemNumber'"
 	$window.FindName('UnitOfMeasureCombobox').ItemsSource = (GetPowerGateConfiguration 'UnitOfMeasures')
@@ -184,8 +192,10 @@ function CreateNewErpItemVaultItem($vaultItem) {
 }
 
 function UpdateErpItemVaultItem($erpItem, $vaultItem) {
+	Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 	$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.ErpItemUpdate.xaml")
 	$window = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+	ApplyVaultTheme $window
 	$window.Title = "powerGate - Update $erpName Item"
 	$window.FindName('Title').Content = "Update $erpName Item '$itemNumber'"
 

@@ -17,8 +17,10 @@ Add-VaultTab -Name "$erpName BOM" -EntityType File -Action {
 	$script:itemNumber = $selectedFile._PartNumber
 	if ($script:itemNumber) { $script:itemNumber = $script:itemNumber.ToUpper() } #TODO: Business Central converts Item Number to upper case
 
+	Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Autodesk.DataManagement.Client.Framework.Forms
 	$xamlFile = [xml](Get-Content "$PSScriptRoot\$filePrefix.Vault-Tab-ErpBom.xaml")
 	$tab_control = [Windows.Markup.XamlReader]::Load( (New-Object System.Xml.XmlNodeReader $xamlFile) )
+	ApplyVaultTheme $tab_control
 
 	#region Pre-Checks
 	$tab_control.FindName('ButtonTransferBom').Visibility = "Collapsed"
