@@ -25,7 +25,8 @@ function GetErpItemFromVaultItem($vaultItem) {
     $erpItem.Material = $vaultItem._Material
     $erpItem.Weight = [double](($vaultItem.Mass -replace "[^\d*\.\,?\d*$/]", '') -replace ",", ".")
     if ($vaultItem._Thumbnail -and $vaultItem._Thumbnail.Image) {
-        $erpItem.Thumbnail = [System.Convert]::ToBase64String($vaultItem._Thumbnail.Image)
+        #$erpItem.Thumbnail = [System.Convert]::ToBase64String($vaultItem._Thumbnail.Image)
+        $erpItem.Thumbnail = $vaultItem._Thumbnail.Image
     }
     $erpItem.ThinClientLink = $vaultItem.ThinClientHyperLink #GetVaultThinClientLink $vaultItem
     $erpItem.ThickClientLink = $vaultItem.ThickClientHyperLink #GetVaultThickClientLink $vaultItem
