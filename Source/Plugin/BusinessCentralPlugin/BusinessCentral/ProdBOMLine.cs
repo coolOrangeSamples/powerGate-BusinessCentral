@@ -1,12 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace BusinessCentralPlugin.BusinessCentral
 {
     public class ProdBOMLineMin
     {
-        [JsonProperty("@odata.context")]
+        [JsonPropertyName("@odata.context")]
         public string odatacontext { get; set; }
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string Production_BOM_No { get; set; }
         public int Line_No { get; set; }
@@ -15,9 +15,9 @@ namespace BusinessCentralPlugin.BusinessCentral
 
     public class ProdBOMLine
     {
-        [JsonProperty("@odata.context")]
+        [JsonPropertyName("@odata.context")]
         public string odatacontext { get; set; }
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string Production_BOM_No { get; set; }
         public int Line_No { get; set; }

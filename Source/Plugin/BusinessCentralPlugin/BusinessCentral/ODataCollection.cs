@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace BusinessCentralPlugin.BusinessCentral
 {
     internal class ODataResponse<T>
     {
-        [JsonProperty("@odata.context")]
+        [JsonPropertyName("@odata.context")]
         public string oDataContext { get; set; }
-            
-        [JsonProperty("value")]
+
+        [JsonPropertyName("value")]
         public List<T> Value { get; set; }
     }
 }

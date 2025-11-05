@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace BusinessCentralPlugin.BusinessCentral
 {
     public class ItemCardMin
     {
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string No { get; set; }
         public string Description { get; set; }
@@ -12,7 +12,7 @@ namespace BusinessCentralPlugin.BusinessCentral
 
     public class ItemCard
     {
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string No { get; set; }
         public string Description { get; set; }
@@ -26,6 +26,7 @@ namespace BusinessCentralPlugin.BusinessCentral
         public double Unit_Price { get; set; }
         public double Inventory { get; set; }
         public string Vendor_No { get; set; }
+        public string Replenishment_System { get; set; }
         public string Routing_No { get; set; }
         public string Production_BOM_No { get; set; }
         public double Rounding_Precision { get; set; }

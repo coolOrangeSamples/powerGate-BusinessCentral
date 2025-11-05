@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.Services.Common;
 using System.IO;
 using System.Linq;
 using System.ServiceModel.Web;
 using System.Threading.Tasks;
+using BusinessCentralPlugin.BusinessCentral;
 using BusinessCentralPlugin.Helper;
 using powerGateServer.SDK;
 
@@ -31,7 +31,7 @@ namespace BusinessCentralPlugin
             if (expression.Where.Any(b => b.PropertyName.Equals("Number")))
             {
                 var number = (string)expression.GetWhereValueByName(nameof(Item.Number));
-                var documents = Task.Run(async () => await BusinessCentralApi.Instance.GetDocuments(number)).Result;
+                var documents = Api.Instance.GetDocuments(number).GetAwaiter().GetResult();
                 foreach (var document in documents)
                 {
                     results.Add(new Document
@@ -43,7 +43,7 @@ namespace BusinessCentralPlugin
             }
             else
             {
-                throw new NotSupportedException();
+                throw new System.NotSupportedException();
             }
 
             return results;
@@ -51,17 +51,17 @@ namespace BusinessCentralPlugin
 
         public override void Create(Document entity)
         {
-            _ = Task.Run(async () => await BusinessCentralApi.Instance.CreateDocument(entity.Number, entity.FileName)).Result;
+            _ = Api.Instance.CreateDocument(entity.Number, entity.FileName).GetAwaiter().GetResult();
         }
 
         public override void Update(Document entity)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
         public override void Delete(Document entity)
         {
-
+            throw new System.NotImplementedException();
         }
 
         public IStream Download(Document entity)
@@ -69,7 +69,7 @@ namespace BusinessCentralPlugin
             if (WebOperationContext.Current != null)
                 WebOperationContext.Current.OutgoingResponse.Headers.Add("Access-Control-Allow-Origin", "*");
 
-            var bytes = Task.Run(async () => await BusinessCentralApi.Instance.DownloadDocument(entity.Number, entity.FileName)).Result;
+            var bytes = Api.Instance.DownloadDocument(entity.Number, entity.FileName).GetAwaiter().GetResult();
 
             if (WebOperationContext.Current != null)
                 WebOperationContext.Current.OutgoingResponse.Headers["Content-Disposition"] = $"filename={entity.FileName}";
@@ -82,16 +82,16 @@ namespace BusinessCentralPlugin
             byte[] bytes;
             using (var ms = new MemoryStream())
             {
-                Task.Run(async () => await stream.Source.CopyToAsync(ms));
+                stream.Source.CopyToAsync(ms).GetAwaiter().GetResult();
                 bytes = ms.ToArray();
             }
 
-            Task.Run(async () => await BusinessCentralApi.Instance.UploadDocument(entity.Number, entity.FileName, bytes));
+            Api.Instance.UploadDocument(entity.Number, entity.FileName, bytes).GetAwaiter().GetResult();
         }
 
         public void DeleteStream(Document entity)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
     }
 }

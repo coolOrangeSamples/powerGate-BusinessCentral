@@ -26,7 +26,8 @@ namespace BusinessCentralPlugin.Helper
         public static string DefaultItemCategoryCode;
         public static string DefaultInventoryPostingGroup;
         public static string DefaultGeneralProductPostingGroup;
-        public static string GeneralProductPostingGroupMakeIndicator;
+        public static string DefaultReplenishmentSystem;
+        public static string ReplenishmentSystemPurchaseIndicator;
         public static string ItemAttributeDescription;
         public static string ItemAttributeMaterial;
         public static string ItemLinkThinClient;
@@ -103,16 +104,17 @@ namespace BusinessCentralPlugin.Helper
                 throw new ConfigurationErrorsException(
                     "BusinessCentral.Settings section is missing in powerGateBusinessCentralPlugin.dll.config");
 
-            DefaultItemType = settingsSection.Settings["Default_Item_Type"].Value;
-            DefaultItemCategoryCode = settingsSection.Settings["Default_Item_Category_Code"].Value;
-            DefaultInventoryPostingGroup = settingsSection.Settings["Default_Inventory_Posting_Group"].Value;
-            DefaultGeneralProductPostingGroup = settingsSection.Settings["Default_General_Product_Posting_Group"].Value;
-            GeneralProductPostingGroupMakeIndicator = settingsSection.Settings["General_Product_Posting_Group_Make_Indicator"].Value;
-            ItemAttributeDescription = settingsSection.Settings["Item_Attribute_Description"].Value;
-            ItemAttributeMaterial = settingsSection.Settings["Item_Attribute_Material"].Value;
-            ItemLinkThinClient = settingsSection.Settings["Item_Link_ThinClient"].Value;
-            ItemLinkThickClient = settingsSection.Settings["Item_Link_ThickClient"].Value;
-            RoutingLinkRawMaterial = settingsSection.Settings["Routing_Link_RawMaterial"].Value;
+            DefaultItemType = settingsSection.Settings["Default_Item_Type"]?.Value;
+            DefaultItemCategoryCode = settingsSection.Settings["Default_Item_Category_Code"]?.Value;
+            DefaultInventoryPostingGroup = settingsSection.Settings["Default_Inventory_Posting_Group"]?.Value;
+            DefaultGeneralProductPostingGroup = settingsSection.Settings["Default_General_Product_Posting_Group"]?.Value;
+            DefaultReplenishmentSystem = settingsSection.Settings["Default_Replenishment_System"]?.Value;
+            ReplenishmentSystemPurchaseIndicator = settingsSection.Settings["Replenishment_System_Purchase_Indicator"]?.Value;
+            ItemAttributeDescription = settingsSection.Settings["Item_Attribute_Description"]?.Value;
+            ItemAttributeMaterial = settingsSection.Settings["Item_Attribute_Material"]?.Value;
+            ItemLinkThinClient = settingsSection.Settings["Item_Link_ThinClient"]?.Value;
+            ItemLinkThickClient = settingsSection.Settings["Item_Link_ThickClient"]?.Value;
+            RoutingLinkRawMaterial = settingsSection.Settings["Routing_Link_RawMaterial"]?.Value;
         }
 
         private static void ValidateConfiguration()
@@ -170,12 +172,12 @@ namespace BusinessCentralPlugin.Helper
         {
             if (EnableStartupCheck)
             {
-                var companies = BusinessCentralApi.Instance.GetCompanies();
-                var attributeDefinitions = BusinessCentralApi.Instance.GetItemAttributeDefinitions();
-                var itemCategories = BusinessCentralApi.Instance.GetItemCategories();
-                var inventoryPostingGroups = BusinessCentralApi.Instance.GetInventoryPostingGroups();
-                var generalProductPostingGroups = BusinessCentralApi.Instance.GetGeneralProductPostingGroups();
-                var routingLinks = BusinessCentralApi.Instance.GetRoutingLinks();
+                var companies = Api.Instance.GetCompanies();
+                var attributeDefinitions = Api.Instance.GetItemAttributeDefinitions();
+                var itemCategories = Api.Instance.GetItemCategories();
+                var inventoryPostingGroups = Api.Instance.GetInventoryPostingGroups();
+                var generalProductPostingGroups = Api.Instance.GetGeneralProductPostingGroups();
+                var routingLinks = Api.Instance.GetRoutingLinks();
 
                 var tasks = new List<Task>
                 {
@@ -214,8 +216,8 @@ namespace BusinessCentralPlugin.Helper
                 if (!_generalProductPostingGroups.Any(i => i.code.Equals(DefaultGeneralProductPostingGroup)))
                     throw new ConfigurationErrorsException($"Default_General_Product_Posting_Group cannot be '{DefaultGeneralProductPostingGroup}'");
 
-                if (!_generalProductPostingGroups.Any(i => i.code.Equals(GeneralProductPostingGroupMakeIndicator)))
-                    throw new ConfigurationErrorsException($"General_Product_Posting_Group_Make_Indicator cannot be '{GeneralProductPostingGroupMakeIndicator}'");
+                if (!_generalProductPostingGroups.Any(i => i.code.Equals(ReplenishmentSystemPurchaseIndicator)))
+                    throw new ConfigurationErrorsException($"Replenishment_System_Purchase_Indicator cannot be '{ReplenishmentSystemPurchaseIndicator}'");
 
                 if (!_routingLinks.Any(i => i.Code.Equals(RoutingLinkRawMaterial)))
                     throw new ConfigurationErrorsException($"Routing_Link_RawMaterial cannot be '{RoutingLinkRawMaterial}'");
@@ -224,8 +226,8 @@ namespace BusinessCentralPlugin.Helper
 
         private static void CacheLookups()
         {
-            var unitsOfMeasures = BusinessCentralApi.Instance.GetUnitsOfMeasures();
-            var vendors = BusinessCentralApi.Instance.GetVendors();
+            var unitsOfMeasures = Api.Instance.GetUnitsOfMeasures();
+            var vendors = Api.Instance.GetVendors();
             var tasks = new List<Task> { unitsOfMeasures, vendors };
             Task.WaitAll(tasks.ToArray());
 

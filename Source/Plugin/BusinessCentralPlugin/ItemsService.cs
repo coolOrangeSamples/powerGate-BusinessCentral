@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Services.Common;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using BusinessCentralPlugin.BusinessCentral;
 using BusinessCentralPlugin.Helper;
 using powerGateServer.SDK;
 
 namespace BusinessCentralPlugin
 {
-    using Attribute = BusinessCentral.Attribute;
-    using ItemCard = BusinessCentral.ItemCard;
-    using Link = BusinessCentral.Link;
-
     [DataServiceKey(nameof(Number))]
     [DataServiceEntity]
     public class Item
@@ -28,7 +24,7 @@ namespace BusinessCentralPlugin
         public bool MakeBuy { get; set; } // readonly
         public bool Blocked { get; set; } // readonly
         public string Supplier { get; set; } // readonly
-        public string Thumbnail { get; set; }
+        public byte[] Thumbnail { get; set; }
         public string ThinClientLink { get; set; }
         public string ThickClientLink { get; set; }
     }
@@ -40,7 +36,7 @@ namespace BusinessCentralPlugin
             if (expression.IsSimpleWhereToken())
             {
                 var number = (string)expression.GetWhereValueByName(nameof(Item.Number));
-                return new List<Item> { Task.Run(async () => await GetItemByNumberAsync(number, true)).Result };
+                return new List<Item> { GetItemByNumberAsync(number, true).GetAwaiter().GetResult() };
             }
 
             //TODO: Implement filter
@@ -49,14 +45,15 @@ namespace BusinessCentralPlugin
 
         public static async Task<Item> GetItemByNumberAsync(string number, bool includeThumbnail = false)
         {
-            var bcItemCardTask = BusinessCentralApi.Instance.GetItemCard(number);
-            var bcAttributesTask = BusinessCentralApi.Instance.GetItemAttributes(number);
-            var bcLinksTask = BusinessCentralApi.Instance.GetItemLinks(number);
-            Task.WaitAll(bcItemCardTask, bcAttributesTask, bcLinksTask);
+            var bcItemCardTask = Api.Instance.GetItemCard(number);
+            var bcAttributesTask = Api.Instance.GetItemAttributes(number);
+            var bcLinksTask = Api.Instance.GetItemLinks(number);
 
-            var bcItemCard = bcItemCardTask.Result;
-            var bcAttributes = bcAttributesTask.Result;
-            var bcLinks = bcLinksTask.Result;
+            //await Task.WhenAll(bcItemCardTask, bcAttributesTask, bcLinksTask);
+
+            var bcItemCard = await bcItemCardTask;
+            var bcAttributes = await bcAttributesTask;
+            var bcLinks = await bcLinksTask;
 
             if (bcItemCard == null)
                 return new Item();
@@ -64,7 +61,7 @@ namespace BusinessCentralPlugin
             var item = ComposeItem(bcItemCard, bcAttributes, bcLinks);
             if (includeThumbnail)
             {
-                var picture = await BusinessCentralApi.Instance.GetItemPicture(number);
+                var picture = await Api.Instance.GetItemPicture(number);
                 item.Thumbnail = picture;
             }
 
@@ -75,14 +72,15 @@ namespace BusinessCentralPlugin
         {
             var items = new List<Item>();
 
-            var bcItemCardsTask = BusinessCentralApi.Instance.GetItemCards();
-            var bcAttributesTask = BusinessCentralApi.Instance.GetItemAttributes();
-            var bcLinksTask = BusinessCentralApi.Instance.GetItemLinks();
-            Task.WaitAll(bcItemCardsTask, bcAttributesTask, bcLinksTask);
+            var bcItemCardsTask = Api.Instance.GetItemCards();
+            var bcAttributesTask = Api.Instance.GetItemAttributes();
+            var bcLinksTask = Api.Instance.GetItemLinks();
 
-            var bcItemCards = bcItemCardsTask.Result;
-            var bcAttributes = bcAttributesTask.Result;
-            var bcLinks = bcLinksTask.Result;
+            Task.WhenAll(bcItemCardsTask, bcAttributesTask, bcLinksTask).GetAwaiter().GetResult();
+
+            var bcItemCards = bcItemCardsTask.GetAwaiter().GetResult();
+            var bcAttributes = bcAttributesTask.GetAwaiter().GetResult();
+            var bcLinks = bcLinksTask.GetAwaiter().GetResult();
 
             foreach (var bcItemCard in bcItemCards)
                 items.Add(ComposeItem(bcItemCard, bcAttributes, bcLinks));
@@ -90,7 +88,7 @@ namespace BusinessCentralPlugin
             return items;
         }
 
-        private static Item ComposeItem(ItemCard bcItemCard, List<Attribute> bcAttributes, List<Link> bcLinks)
+        private static Item ComposeItem(ItemCard bcItemCard, List<BusinessCentral.Attribute> bcAttributes, List<Link> bcLinks)
         {
             return new Item
             {
@@ -102,61 +100,71 @@ namespace BusinessCentralPlugin
                 Material = bcAttributes.SingleOrDefault(l => l.itemNumber.Equals(bcItemCard.No) && l.attribute.Equals(Configuration.ItemAttributeMaterial))?.value,
                 Price = bcItemCard.Unit_Price,
                 Stock = bcItemCard.Inventory,
-                MakeBuy = bcItemCard.Gen_Prod_Posting_Group != Configuration.GeneralProductPostingGroupMakeIndicator,
+                MakeBuy = bcItemCard.Replenishment_System == Configuration.ReplenishmentSystemPurchaseIndicator,
                 Blocked = bcItemCard.Blocked,
                 Supplier = Configuration.Vendors.SingleOrDefault(v => v.number.Equals(bcItemCard.Vendor_No))?.displayName,
-                ThinClientLink = bcLinks.SingleOrDefault(l => l.itemNumber.Equals(bcItemCard.No) && l.description.Equals(Configuration.ItemLinkThinClient))?.url,
-                ThickClientLink = bcLinks.SingleOrDefault(l => l.itemNumber.Equals(bcItemCard.No) && l.description.Equals(Configuration.ItemLinkThickClient))?.url
+                ThinClientLink = bcLinks.FirstOrDefault(l => l.itemNumber.Equals(bcItemCard.No) && l.description.Equals(Configuration.ItemLinkThinClient))?.url,
+                ThickClientLink = bcLinks.FirstOrDefault(l => l.itemNumber.Equals(bcItemCard.No) && l.description.Equals(Configuration.ItemLinkThickClient))?.url
             };
         }
 
         public override void Update(Item entity)
         {
-            var bcItemCard = Task.Run(async () => await BusinessCentralApi.Instance.UpdateItemCard(new ItemCard
+            var bcItemCard = Api.Instance.UpdateItemCard(new ItemCard
             {
                 No = entity.Number,
                 Description = entity.Title,
                 Base_Unit_of_Measure = entity.UnitOfMeasure,
                 Net_Weight = entity.Weight
-            })).Result;
+            }).GetAwaiter().GetResult();
 
             var tasks = new List<Task>
             {
-                BusinessCentralApi.Instance.SetItemPicture(bcItemCard.No, entity.Thumbnail),
-                BusinessCentralApi.Instance.SetItemAttribute(bcItemCard.No, Configuration.ItemAttributeDescription, entity.Description),
-                BusinessCentralApi.Instance.SetItemAttribute(bcItemCard.No, Configuration.ItemAttributeMaterial, entity.Material),
-                BusinessCentralApi.Instance.SetItemLink(bcItemCard.No, entity.ThinClientLink, Configuration.ItemLinkThinClient),
-                BusinessCentralApi.Instance.SetItemLink(bcItemCard.No, entity.ThickClientLink, Configuration.ItemLinkThickClient),
+                Api.Instance.SetItemPicture(bcItemCard.No, entity.Thumbnail),
+                Api.Instance.SetItemAttributes(
+                    bcItemCard.No,
+                    new []{ Configuration.ItemAttributeDescription, Configuration.ItemAttributeMaterial },
+                    new []{ entity.Description, entity.Material }
+                    ),
+                Api.Instance.SetItemLinks(
+                    bcItemCard.No,
+                    new []{ Configuration.ItemLinkThinClient, Configuration.ItemLinkThickClient },
+                    new []{ entity.ThinClientLink, entity.ThickClientLink }
+                    )
             };
-            Task.WaitAll(tasks.ToArray());
+            Task.WhenAll(tasks.ToArray()).GetAwaiter().GetResult();
         }
 
         public override void Create(Item entity)
         {
-            var bcItemCard = Task.Run(async () => await BusinessCentralApi.Instance.CreateItemCard(new ItemCard
+            var bcItemCard = Api.Instance.CreateItemCard(new ItemCard
             {
                 No = entity.Number,
                 Description = entity.Title,
                 Base_Unit_of_Measure = entity.UnitOfMeasure,
                 Net_Weight = entity.Weight
-            })).Result;
+            }).GetAwaiter().GetResult();
 
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
             var tasks = new List<Task>
             {
-                BusinessCentralApi.Instance.SetItemPicture(bcItemCard.No, entity.Thumbnail),
-                BusinessCentralApi.Instance.SetItemAttribute(bcItemCard.No, Configuration.ItemAttributeDescription, entity.Description),
-                BusinessCentralApi.Instance.SetItemAttribute(bcItemCard.No, Configuration.ItemAttributeMaterial, entity.Material),
-                BusinessCentralApi.Instance.SetItemLink(bcItemCard.No, entity.ThinClientLink, Configuration.ItemLinkThinClient),
-                BusinessCentralApi.Instance.SetItemLink(bcItemCard.No, entity.ThickClientLink, Configuration.ItemLinkThickClient)
+                Api.Instance.SetItemPicture(bcItemCard.No, entity.Thumbnail),
+                Api.Instance.SetItemAttributes(
+                    bcItemCard.No,
+                    new []{ Configuration.ItemAttributeDescription, Configuration.ItemAttributeMaterial },
+                    new []{ entity.Description, entity.Material }
+                ),
+                Api.Instance.SetItemLinks(
+                    bcItemCard.No,
+                    new []{ Configuration.ItemLinkThinClient, Configuration.ItemLinkThickClient },
+                    new []{ entity.ThinClientLink, entity.ThickClientLink }
+                )
             };
-            Task.WaitAll(tasks.ToArray());
+            Task.WhenAll(tasks.ToArray()).GetAwaiter().GetResult();
         }
 
         public override void Delete(Item entity)
         {
-            throw new NotSupportedException();
+            throw new System.NotSupportedException();
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace BusinessCentralPlugin.BusinessCentral
 {
     public class Document
     {
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string id { get; set; }
         public string fileName { get; set; }
@@ -17,10 +17,10 @@ namespace BusinessCentralPlugin.BusinessCentral
         public bool documentFlowPurchase { get; set; }
         public DateTime lastModifiedDateTime { get; set; }
 
-        [JsonProperty("attachmentContent@odata.mediaEditLink")]
+        [JsonPropertyName("attachmentContent@odata.mediaEditLink")]
         public string attachmentContentodatamediaEditLink { get; set; }
 
-        [JsonProperty("attachmentContent@odata.mediaReadLink")]
+        [JsonPropertyName("attachmentContent@odata.mediaReadLink")]
         public string attachmentContentodatamediaReadLink { get; set; }
     }
 }

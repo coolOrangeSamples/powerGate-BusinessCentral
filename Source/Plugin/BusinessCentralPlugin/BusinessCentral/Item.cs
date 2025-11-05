@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace BusinessCentralPlugin.BusinessCentral
 {
     public class ItemMin
     {
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string id { get; set; }
         public string number { get; set; }
@@ -13,12 +13,12 @@ namespace BusinessCentralPlugin.BusinessCentral
 
     public class Itemspicture
     {
-        [JsonProperty("@odata.etag")]
+        [JsonPropertyName("@odata.etag")]
         public string odataetag { get; set; }
         public string id { get; set; }
-        [JsonProperty("pictureContent@odata.mediaEditLink")]
+        [JsonPropertyName("pictureContent@odata.mediaEditLink")]
         public string pictureContentodatamediaEditLink { get; set; }
-        [JsonProperty("pictureContent@odata.mediaReadLink")]
+        [JsonPropertyName("pictureContent@odata.mediaReadLink")]
         public string pictureContentodatamediaReadLink { get; set; }
     }
 }

@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace BusinessCentralPlugin.Helper
 {
@@ -11,13 +12,13 @@ namespace BusinessCentralPlugin.Helper
     {
         public class OAuthToken
         {
-            [JsonProperty("token_type")]
+            [JsonPropertyName("token_type")]
             public string TokenType { get; set; }
-            [JsonProperty("expires_in")]
+            [JsonPropertyName("expires_in")]
             public int ExpiresIn { get; set; }
-            [JsonProperty("ext_expires_in")]
+            [JsonPropertyName("ext_expires_in")]
             public int ExtExpiresIn { get; set; }
-            [JsonProperty("access_token")]
+            [JsonPropertyName("access_token")]
             public string AccessToken { get; set; }
 
             public DateTime Issued { get; set; }
@@ -60,7 +61,7 @@ namespace BusinessCentralPlugin.Helper
                     throw new Exception($"Error getting token: {await response.Content.ReadAsStringAsync()}");
 
                 var responseJson = await response.Content.ReadAsStringAsync();
-                var token = JsonConvert.DeserializeObject<OAuthToken>(responseJson);
+                var token = JsonSerializer.Deserialize<OAuthToken>(responseJson, JsonHelper.DeserializeOptions);
 
                 token.Issued = DateTime.Now;
 

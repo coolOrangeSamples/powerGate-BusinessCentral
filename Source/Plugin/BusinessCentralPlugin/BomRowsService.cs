@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.Services.Common;
 using System.Threading.Tasks;
+using BusinessCentralPlugin.BusinessCentral;
 using BusinessCentralPlugin.Helper;
 using powerGateServer.SDK;
 
 namespace BusinessCentralPlugin
 {
-    using ProdBOMLine = BusinessCentral.ProdBOMLine;
-
     [DataServiceKey(nameof(ParentNumber), nameof(Position), nameof(ChildNumber))]
     [DataServiceEntity]
     public class BomRow
@@ -31,7 +29,7 @@ namespace BusinessCentralPlugin
                 var position = (int)expression.GetWhereValueByName(nameof(BomRow.Position));
                 var childNumber = (string)expression.GetWhereValueByName(nameof(BomRow.ChildNumber));
 
-                var bomRow = Task.Run(async () => await BusinessCentralApi.Instance.GetBomRow(parentNumber, position, childNumber)).Result;
+                var bomRow = Api.Instance.GetBomRow(parentNumber, position, childNumber).GetAwaiter().GetResult();
                 if (bomRow == null)
                     return new List<BomRow>();
 
@@ -41,19 +39,19 @@ namespace BusinessCentralPlugin
                     ChildNumber = bomRow.No,
                     Position = bomRow.Line_No,
                     Quantity = (double)bomRow.Quantity_per,
-                    Item = Task.Run(async () => await Items.GetItemByNumberAsync(bomRow.No)).Result,
+                    Item = Items.GetItemByNumberAsync(bomRow.No).GetAwaiter().GetResult(),
                     IsRawMaterial = bomRow.Routing_Link_Code == Configuration.RoutingLinkRawMaterial
                 };
 
                 return new List<BomRow> { entity };
             }
 
-            throw new NotSupportedException();
+            throw new System.NotSupportedException();
         }
 
         public override void Update(BomRow entity)
         {
-            var item = Task.Run(async () => await BusinessCentralApi.Instance.GetItemCardMin(entity.ChildNumber)).Result;
+            var item = Api.Instance.GetItemCardMin(entity.ChildNumber).GetAwaiter().GetResult();
             var bomRow = new ProdBOMLine
             {
                 Production_BOM_No = entity.ParentNumber,
@@ -63,12 +61,12 @@ namespace BusinessCentralPlugin
                 Quantity_per = (decimal)entity.Quantity,
                 Routing_Link_Code = entity.IsRawMaterial ? Configuration.RoutingLinkRawMaterial : null
             };
-            Task.Run(async () => await BusinessCentralApi.Instance.UpdateBomRow(bomRow));
+            Api.Instance.UpdateBomRow(bomRow).GetAwaiter().GetResult();
         }
 
         public override void Create(BomRow entity)
         {
-            var item = Task.Run(async () => await BusinessCentralApi.Instance.GetItemCardMin(entity.ChildNumber)).Result;
+            var item = Api.Instance.GetItemCardMin(entity.ChildNumber).GetAwaiter().GetResult();
             var bomRow = new ProdBOMLine
             {
                 Production_BOM_No = entity.ParentNumber,
@@ -78,7 +76,7 @@ namespace BusinessCentralPlugin
                 Quantity_per = (decimal)entity.Quantity,
                 Routing_Link_Code = entity.IsRawMaterial ? Configuration.RoutingLinkRawMaterial : null
             };
-            Task.Run(async () => await BusinessCentralApi.Instance.CreateBomRow(bomRow));
+            Api.Instance.CreateBomRow(bomRow).GetAwaiter().GetResult();
         }
 
         public override void Delete(BomRow entity)
@@ -89,7 +87,7 @@ namespace BusinessCentralPlugin
                 Line_No = entity.Position,
                 No = entity.ChildNumber
             };
-            Task.Run(async () => await BusinessCentralApi.Instance.DeleteBomRow(bomRow));
+            Api.Instance.DeleteBomRow(bomRow).GetAwaiter().GetResult();
         }
     }
 }

@@ -1,9 +1,9 @@
-﻿<Project Sdk="WixToolset.Sdk/4.0.3">
+﻿<Project Sdk="WixToolset.Sdk/5.0.1">
   <ItemGroup>
     <Content Include="Config.wxi" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.3" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.1" />
   </ItemGroup>
   <PropertyGroup>
     <Major>1</Major>
@@ -14,6 +14,6 @@
     <Manufacturer>coolOrange</Manufacturer>
     <ProductName>powerGatePlugin</ProductName>
     <Platforms>x64</Platforms>
-	<DefineConstants>Major=$(Major);Minor=$(Minor);Patch=$(Patch);Revision=$(Revision);$(DefineConstants)</DefineConstants>
+    <DefineConstants>Major=$(Major);Minor=$(Minor);Patch=$(Patch);Revision=$(Revision);$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 </Project>

@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Services.Common;
+using System.Linq;
 using System.Threading.Tasks;
+using BusinessCentralPlugin.BusinessCentral;
 using BusinessCentralPlugin.Helper;
 using powerGateServer.SDK;
 
 namespace BusinessCentralPlugin
 {
-    using ProdBOMLine = BusinessCentral.ProdBOMLine;
-    using ProductionBOM = BusinessCentral.ProductionBOM;
-
     [DataServiceKey(nameof(Number))]
     [DataServiceEntity]
     public class BomHeader
@@ -28,23 +26,23 @@ namespace BusinessCentralPlugin
             {
                 var number = (string)expression.GetWhereValueByName(nameof(BomHeader.Number));
 
-                var bomRowTask = BusinessCentralApi.Instance.GetBomHeaderAndRows(number);
+                var bomRowTask = Api.Instance.GetBomHeaderAndRows(number);
                 var itemTask = Items.GetItemByNumberAsync(number);
-                Task.WaitAll(bomRowTask, itemTask);
+                Task.WhenAll(bomRowTask, itemTask).GetAwaiter().GetResult();
 
-                var bomRow = bomRowTask.Result;
+                var bomRow = bomRowTask.GetAwaiter().GetResult();
                 if (bomRow == null)
                     return new List<BomHeader>();
 
                 var entity = new BomHeader
                 {
                     Number = bomRow.No,
-                    Item = itemTask.Result,
+                    Item = itemTask.GetAwaiter().GetResult(),
                     Children = new List<BomRow>()
                 };
 
                 var bag = new ConcurrentBag<BomRow>();
-                async void BomRowCreation(ProdBOMLine line)
+                var rowTasks = bomRow.ProductionBOMsProdBOMLine.Select(async line =>
                 {
                     var row = new BomRow
                     {
@@ -56,19 +54,19 @@ namespace BusinessCentralPlugin
                         IsRawMaterial = line.Routing_Link_Code == Configuration.RoutingLinkRawMaterial
                     };
                     bag.Add(row);
-                }
-                Parallel.ForEach(bomRow.ProductionBOMsProdBOMLine, BomRowCreation);
+                });
+                Task.WhenAll(rowTasks).GetAwaiter().GetResult();
                 entity.Children.AddRange(bag.ToArray());
 
                 return new List<BomHeader> { entity };
             }
 
-            throw new NotSupportedException();
+            throw new System.NotSupportedException();
         }
 
         public override void Update(BomHeader entity)
         {
-            var item = Task.Run(async () => await BusinessCentralApi.Instance.GetItemCard(entity.Number)).Result;
+            var item = Api.Instance.GetItemCard(entity.Number).GetAwaiter().GetResult();
             var bomHeader = new ProductionBOM
             {
                 No = entity.Number,
@@ -77,15 +75,15 @@ namespace BusinessCentralPlugin
             };
             var tasks = new List<Task>
             {
-                BusinessCentralApi.Instance.UpdateBomHeader(bomHeader),
-                BusinessCentralApi.Instance.UpdateItemCardProductionBom(item.No)
+                Api.Instance.UpdateBomHeader(bomHeader),
+                Api.Instance.UpdateItemCardProductionBom(item.No)
             };
-            Task.WaitAll(tasks.ToArray());
+            Task.WhenAll(tasks.ToArray()).GetAwaiter().GetResult();
         }
 
         public override void Create(BomHeader entity)
         {
-            var item = Task.Run(async () => await BusinessCentralApi.Instance.GetItemCard(entity.Number)).Result;
+            var item = Api.Instance.GetItemCard(entity.Number).GetAwaiter().GetResult();
             var bomHeader = new ProductionBOM
             {
                 No = entity.Number,
@@ -94,15 +92,15 @@ namespace BusinessCentralPlugin
             };
             var tasks = new List<Task>
             {
-                BusinessCentralApi.Instance.CreateBomHeader(bomHeader),
-                BusinessCentralApi.Instance.UpdateItemCardProductionBom(item.No)
+                Api.Instance.CreateBomHeader(bomHeader),
+                Api.Instance.UpdateItemCardProductionBom(item.No)
             };
-            Task.WaitAll(tasks.ToArray());
+            Task.WhenAll(tasks.ToArray()).GetAwaiter().GetResult();
         }
 
         public override void Delete(BomHeader entity)
         {
-            throw new NotSupportedException();
+            throw new System.NotSupportedException();
         }
     }
 }
